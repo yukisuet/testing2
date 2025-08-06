@@ -30,17 +30,22 @@ def process_excel_files():
         data_detail_df['masked_acct_no'] = data_detail_df['masked_acct_no'].astype(str)
         associate_df['card_no'] = associate_df['card_no'].astype(str)
         
-        # Extract last 4 digits from masked_acct_no
+        # Extract last 4 digits from both masked_acct_no AND card_no
         data_detail_df['last_4_digits'] = data_detail_df['masked_acct_no'].str[-4:]
+        associate_df['card_no_last_4'] = associate_df['card_no'].str[-4:]
         
-        # Show sample of extracted digits
-        print("\nSample of last 4 digits extraction:")
+        # Show sample of extracted digits from both files
+        print("\nSample of last 4 digits extraction from data_detail:")
         sample_data = data_detail_df[['masked_acct_no', 'last_4_digits']].head()
         print(sample_data)
         
-        # Create lookup dictionary from associate data
-        print("\nCreating lookup mapping...")
-        card_to_tsys_map = dict(zip(associate_df['card_no'], associate_df['tsys_acct_no']))
+        print("\nSample of last 4 digits extraction from associate:")
+        sample_assoc = associate_df[['card_no', 'card_no_last_4']].head()
+        print(sample_assoc)
+        
+        # Create lookup dictionary from associate data using last 4 digits of card_no
+        print("\nCreating lookup mapping using last 4 digits...")
+        card_to_tsys_map = dict(zip(associate_df['card_no_last_4'], associate_df['tsys_acct_no']))
         print(f"Created lookup map with {len(card_to_tsys_map)} entries")
         
         # Add tsys_acct_no as new column 'acct_no' based on matching last 4 digits
