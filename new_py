@@ -7,8 +7,8 @@ def process_excel_files():
     """
     Process data_detail.xlsx and associate.xlsx files:
     1. Match last 4 digits of masked_acct_no with card_no
-    2. Merge tsys_acct_no into data_detail
-    3. Create separate sheets by tsys_acct_no
+    2. Add tsys_acct_no as new 'acct_no' column in data_detail
+    3. Create separate sheets by acct_no
     4. Sort by trans_dt (oldest to latest)
     """
     
@@ -43,17 +43,17 @@ def process_excel_files():
         card_to_tsys_map = dict(zip(associate_df['card_no'], associate_df['tsys_acct_no']))
         print(f"Created lookup map with {len(card_to_tsys_map)} entries")
         
-        # Merge tsys_acct_no based on matching last 4 digits
-        print("Merging tsys_acct_no...")
-        data_detail_df['tsys_acct_no'] = data_detail_df['last_4_digits'].map(card_to_tsys_map)
+        # Add tsys_acct_no as new column 'acct_no' based on matching last 4 digits
+        print("Adding tsys_acct_no as new 'acct_no' column...")
+        data_detail_df['acct_no'] = data_detail_df['last_4_digits'].map(card_to_tsys_map)
         
         # Check matching results
-        matched_count = data_detail_df['tsys_acct_no'].notna().sum()
+        matched_count = data_detail_df['acct_no'].notna().sum()
         total_count = len(data_detail_df)
         print(f"Matched {matched_count} out of {total_count} records ({matched_count/total_count*100:.1f}%)")
         
         # Show unmatched records for debugging
-        unmatched = data_detail_df[data_detail_df['tsys_acct_no'].isna()]
+        unmatched = data_detail_df[data_detail_df['acct_no'].isna()]
         if len(unmatched) > 0:
             print(f"\nSample unmatched last_4_digits:")
             print(unmatched['last_4_digits'].value_counts().head())
@@ -68,22 +68,22 @@ def process_excel_files():
         # Remove the helper column
         data_detail_df = data_detail_df.drop('last_4_digits', axis=1)
         
-        # Create output Excel file with separate sheets by tsys_acct_no
-        output_filename = 'merged_data_by_tsys_acct.xlsx'
+        # Create output Excel file with separate sheets by acct_no (which contains tsys_acct_no values)
+        output_filename = 'merged_data_by_acct_no.xlsx'
         print(f"\nCreating output file: {output_filename}")
         
         with pd.ExcelWriter(output_filename, engine='openpyxl') as writer:
             
-            # Group by tsys_acct_no and create separate sheets
-            grouped = data_detail_df.groupby('tsys_acct_no', dropna=False)
+            # Group by acct_no and create separate sheets
+            grouped = data_detail_df.groupby('acct_no', dropna=False)
             
-            for tsys_acct_no, group_df in grouped:
-                # Handle NaN tsys_acct_no
-                if pd.isna(tsys_acct_no):
+            for acct_no, group_df in grouped:
+                # Handle NaN acct_no
+                if pd.isna(acct_no):
                     sheet_name = 'Unmatched'
                 else:
                     # Clean sheet name (Excel sheet names have restrictions)
-                    sheet_name = str(tsys_acct_no).replace('/', '_').replace('\\', '_')[:31]
+                    sheet_name = str(acct_no).replace('/', '_').replace('\\', '_')[:31]
                 
                 # Sort group by trans_dt (oldest to latest)
                 group_df_sorted = group_df.sort_values('trans_dt')
@@ -94,13 +94,13 @@ def process_excel_files():
                 group_df_sorted.to_excel(writer, sheet_name=sheet_name, index=False)
         
         print(f"\n✅ Successfully created {output_filename}")
-        print(f"📊 Total unique tsys_acct_no values: {data_detail_df['tsys_acct_no'].nunca()}")
+        print(f"📊 Total unique acct_no values: {data_detail_df['acct_no'].nunique()}")
         
         # Summary statistics
-        print("\n📈 Summary by tsys_acct_no:")
-        summary = data_detail_df['tsys_acct_no'].value_counts().head(10)
-        for tsys_acct, count in summary.items():
-            print(f"  {tsys_acct}: {count} transactions")
+        print("\n📈 Summary by acct_no:")
+        summary = data_detail_df['acct_no'].value_counts().head(10)
+        for acct_no, count in summary.items():
+            print(f"  {acct_no}: {count} transactions")
         
         return data_detail_df
         
@@ -131,7 +131,7 @@ def show_file_info():
             print(f"❌ {filename} not found")
 
 if __name__ == "__main__":
-    print("🔄 Excel File Processor - Merge and Split by tsys_acct_no")
+    print("🔄 Excel File Processor - Merge and Split by acct_no")
     print("=" * 60)
     
     # Check files first
@@ -142,6 +142,6 @@ if __name__ == "__main__":
     
     if result_df is not None:
         print("\n✨ Processing completed successfully!")
-        print("📁 Output file: merged_data_by_tsys_acct.xlsx")
+        print("📁 Output file: merged_data_by_acct_no.xlsx")
     else:
         print("\n💥 Processing failed. Please check the error messages above.")
